@@ -38,6 +38,7 @@
         <quarkus.platform.version>3.35.3</quarkus.platform.version>
         <skipITs>true</skipITs>
         <surefire-plugin.version>3.5.5</surefire-plugin.version>
+        <tamboui.version>0.3.0</tamboui.version>
     </properties>
 
     <dependencyManagement>
@@ -76,17 +77,17 @@
         <dependency>
             <groupId>dev.tamboui</groupId>
             <artifactId>tamboui-picocli</artifactId>
-            <version>0.3.0</version>
+            <version>${tamboui.version}</version>
         </dependency>
         <dependency>
             <groupId>dev.tamboui</groupId>
             <artifactId>tamboui-toolkit</artifactId>
-            <version>0.3.0</version>
+            <version>${tamboui.version}</version>
         </dependency>
         <dependency>
             <groupId>dev.tamboui</groupId>
             <artifactId>tamboui-panama-backend</artifactId>
-            <version>0.3.0</version>
+            <version>${tamboui.version}</version>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
