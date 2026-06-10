@@ -38,19 +38,25 @@ When cutting a new release:
    - VM appliance artifacts (kernel, disk images)
    - Git remote helper (`git-remote-isx`)
 
-3. **Update the Homebrew formula** in `Sanne/homebrew-tap`:
-   - Update `version` field in `Formula/incus-spawn.rb`
-   - Compute and update SHA256 hashes:
-     ```bash
-     VERSION=0.1.28
-     curl -sL https://github.com/Sanne/incus-spawn/releases/download/v${VERSION}/incus-spawn-macos-aarch64 | shasum -a 256
-     curl -sL https://github.com/Sanne/incus-spawn/releases/download/v${VERSION}/git-remote-isx | shasum -a 256
-     ```
-   - Replace `PLACEHOLDER_ARM64_SHA256` and `PLACEHOLDER_GIT_REMOTE_SHA256` with the computed values
-   - Test locally: `brew install --build-from-source Formula/incus-spawn.rb`
-   - Commit and push to the tap repo
+3. **Homebrew formula is updated automatically** by the release workflow.
+   It computes SHA256 checksums from the build artifacts and pushes the
+   updated formula to `Sanne/homebrew-tap`. Requires the `HOMEBREW_TAP_TOKEN`
+   secret (a PAT with `contents: write` on the tap repo).
 
 4. **Users auto-update** on their next `brew update && brew upgrade`
+
+### Manual formula update (fallback)
+
+If the automated step fails, update the formula manually:
+
+```bash
+VERSION=X.Y.Z
+curl -sL https://github.com/Sanne/incus-spawn/releases/download/v${VERSION}/incus-spawn-macos-aarch64 | shasum -a 256
+curl -sL https://github.com/Sanne/incus-spawn/releases/download/v${VERSION}/git-remote-isx | shasum -a 256
+```
+
+Update `version` and both `sha256` values in `Sanne/homebrew-tap/Formula/incus-spawn.rb`,
+then commit and push.
 
 ## Supported Platforms
 
