@@ -404,10 +404,12 @@ class IncusApi {
     IncusClient.ExecResult execCapture(String instance, List<String> command,
                                        Integer uid, Integer gid, String cwd,
                                        Map<String, String> env) {
-        if (transport instanceof HttpsTransport) {
-            return execCaptureRecordOutput(instance, command, uid, gid, cwd, env);
-        }
-        return execCaptureWebSocket(instance, command, uid, gid, cwd, env);
+        return retryOnNotRunning(() -> {
+            if (transport instanceof HttpsTransport) {
+                return execCaptureRecordOutput(instance, command, uid, gid, cwd, env);
+            }
+            return execCaptureWebSocket(instance, command, uid, gid, cwd, env);
+        });
     }
 
     private IncusClient.ExecResult execCaptureRecordOutput(String instance, List<String> command,
@@ -476,29 +478,31 @@ class IncusApi {
     int execStream(String instance, List<String> command,
                    Integer uid, Integer gid, String cwd, Map<String, String> env,
                    OutputStream stdout, OutputStream stderr) {
-        var postResp = post("/1.0/instances/" + instance + "/exec",
-                buildExecBody(command, uid, gid, cwd, env, false, 0, 0));
-        if (!postResp.isAsync()) throw new IncusException(
-                "exec POST failed (" + postResp.statusCode() + "): " +
-                postResp.body().path("error").asText());
+        return retryOnNotRunning(() -> {
+            var postResp = post("/1.0/instances/" + instance + "/exec",
+                    buildExecBody(command, uid, gid, cwd, env, false, 0, 0));
+            if (!postResp.isAsync()) throw new IncusException(
+                    "exec POST failed (" + postResp.statusCode() + "): " +
+                    postResp.body().path("error").asText());
 
-        var opMeta = postResp.body().path("metadata");
-        var opId   = opMeta.path("id").asText();
-        var fds    = opMeta.path("metadata").path("fds");
-        var opPath = "/1.0/operations/" + opId;
+            var opMeta = postResp.body().path("metadata");
+            var opId   = opMeta.path("id").asText();
+            var fds    = opMeta.path("metadata").path("fds");
+            var opPath = "/1.0/operations/" + opId;
 
-        wsCloseOnly(opPath, fds.path("0").asText());
+            wsCloseOnly(opPath, fds.path("0").asText());
 
-        var outDst = stdout != null ? stdout : OutputStream.nullOutputStream();
-        var errDst = stderr != null ? stderr : OutputStream.nullOutputStream();
+            var outDst = stdout != null ? stdout : OutputStream.nullOutputStream();
+            var errDst = stderr != null ? stderr : OutputStream.nullOutputStream();
 
-        var stdoutThread = Thread.ofVirtual().start(() ->
-                wsStream(opPath, fds.path("1").asText(), outDst));
-        var stderrThread = Thread.ofVirtual().start(() ->
-                wsStream(opPath, fds.path("2").asText(), errDst));
-        joinQuietly(stdoutThread, stderrThread);
+            var stdoutThread = Thread.ofVirtual().start(() ->
+                    wsStream(opPath, fds.path("1").asText(), outDst));
+            var stderrThread = Thread.ofVirtual().start(() ->
+                    wsStream(opPath, fds.path("2").asText(), errDst));
+            joinQuietly(stdoutThread, stderrThread);
 
-        return waitForExecOp(opPath);
+            return waitForExecOp(opPath);
+        });
     }
 
     /**
@@ -571,6 +575,31 @@ class IncusApi {
     }
 
     // ---- WebSocket helpers ----
+
+    private static final int EXEC_RETRY_MAX = 5;
+    private static final long EXEC_RETRY_DELAY_MS = 200;
+
+    private <T> T retryOnNotRunning(java.util.function.Supplier<T> action) {
+        for (int attempt = 0; ; attempt++) {
+            try {
+                return action.get();
+            } catch (IncusException e) {
+                if (attempt < EXEC_RETRY_MAX && isTransientExecError(e)) {
+                    try { Thread.sleep(EXEC_RETRY_DELAY_MS); } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw e;
+                    }
+                    continue;
+                }
+                throw e;
+            }
+        }
+    }
+
+    private static boolean isTransientExecError(IncusException e) {
+        var msg = e.getMessage();
+        return msg != null && msg.contains("Instance is not running");
+    }
 
     // The incus CLI injects these defaults into every exec'd process.
     // The REST API does not — we must provide them explicitly.
