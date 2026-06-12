@@ -27,7 +27,24 @@ if $NATIVE; then
     echo "Building native image (this may take a minute)..."
     NATIVE_ARGS="-Dnative -DskipTests -q"
     if [ "$(uname -s)" = "Linux" ]; then
-        NATIVE_ARGS="$NATIVE_ARGS -Dquarkus.native.container-build=true"
+        # Detect container runtime in the same order Quarkus does (docker first)
+        if [ -n "$CONTAINER_RUNTIME" ]; then
+            CTR="$CONTAINER_RUNTIME"
+        elif command -v docker >/dev/null 2>&1; then
+            CTR=docker
+        elif command -v podman >/dev/null 2>&1; then
+            CTR=podman
+        else
+            echo "Error: docker or podman is required for native builds on Linux."
+            exit 1
+        fi
+        GRAALVM_BASE="container-registry.oracle.com/graalvm/native-image:25.0.3"
+        BUILDER_TAG="incus-spawn-graalvm-builder:25.0.3"
+        if ! $CTR image inspect "$BUILDER_TAG" >/dev/null 2>&1; then
+            echo "Preparing GraalVM builder image (one-time)..."
+            printf 'FROM %s\nWORKDIR /project\n' "$GRAALVM_BASE" | $CTR build -t "$BUILDER_TAG" -
+        fi
+        NATIVE_ARGS="$NATIVE_ARGS -Dquarkus.native.container-build=true -Dquarkus.native.container-runtime=$CTR -Dquarkus.native.builder-image=$BUILDER_TAG -Dquarkus.native.builder-image.pull=never"
     elif [ "$(uname -s)" = "Darwin" ]; then
         if [ -z "$GRAALVM_HOME" ] || [ ! -x "$GRAALVM_HOME/bin/native-image" ]; then
             GRAALVM_HOME=$(/usr/libexec/java_home -V 2>&1 | grep -i graal | awk '{print $NF}' | head -1)
