@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>incus-spawn &mdash; Isolated Linux environments in seconds</title>
+  <meta name="description" content="Full system containers with copy-on-write branching and transparent credential isolation. Run AI coding agents, triage untrusted patches, reproduce bug reports — without risking your host.">
+  <meta property="og:title" content="incus-spawn">
+  <meta property="og:description" content="Isolated Linux environments in seconds — full system containers with CoW branching and transparent credential isolation.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://sanne.github.io/incus-spawn/">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://sanne.github.io/incus-spawn/">
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="logo" href="./">isx</a>
+  <ul class="nav-links">
+    <li><a href="docs.html">Docs</a></li>
+    <li><a href="https://github.com/Sanne/incus-spawn">GitHub</a></li>
+  </ul>
+</nav>
+
+<header class="hero">
+  <h1>Isolated Linux environments in seconds</h1>
+  <p class="subtitle">
+    Full system containers with copy-on-write branching and transparent credential isolation.
+    Run AI coding agents, triage untrusted patches, reproduce bug reports &mdash; without risking your host.
+  </p>
+
+  <div class="install-tabs">
+    <div class="tab-buttons">
+      <button class="tab-btn active" data-tab="macos">macOS</button>
+      <button class="tab-btn" data-tab="linux">Linux</button>
+      <button class="tab-btn" data-tab="jbang">JBang</button>
+    </div>
+    <div class="tab-panel active" id="tab-macos">
+      <code>brew install Sanne/tap/incus-spawn</code>
+    </div>
+    <div class="tab-panel" id="tab-linux">
+      <code>curl -fsSL https://raw.githubusercontent.com/Sanne/incus-spawn/main/get-isx.sh | sh</code>
+    </div>
+    <div class="tab-panel" id="tab-jbang">
+      <code>jbang app install isx@Sanne/incus-spawn</code>
+    </div>
+  </div>
+
+  <div class="cta-links">
+    <a class="primary" href="docs.html">Read the docs</a>
+    <a class="secondary" href="https://github.com/Sanne/incus-spawn">View on GitHub &rarr;</a>
+  </div>
+</header>
+
+<main class="features">
+
+  <section class="feature">
+    <h2>Real machines, not process jails</h2>
+    <p>
+      <strong>Docker and Podman are built for shipping applications</strong> &mdash;
+      minimal filesystems, single-process isolation, fast startup.
+      incus-spawn solves a different problem: full <strong>system containers</strong> powered by
+      <a href="https://linuxcontainers.org/incus/">Incus</a> that behave like real machines.
+      Each environment runs its own init system, has real networking
+      (<code>ping</code>, <code>strace</code>, nested Podman/Docker),
+      and supports GUI and audio passthrough.
+      Templates pre-install your baseline tools and repos, but the environment is a real Linux system &mdash;
+      agents and users can freely <code>dnf install</code>, <code>pip install</code>,
+      build from source, or run Docker Compose just like on a workstation.
+      For untrusted code, KVM virtual machines provide hardware-level isolation with a separate kernel.
+    </p>
+  </section>
+
+  <section class="feature">
+    <h2>Credentials never enter containers</h2>
+    <p>
+      A host-side MITM TLS proxy intercepts HTTPS and injects credentials transparently &mdash;
+      <code>claude</code>, <code>pi</code>, <code>gh</code>, <code>git</code>, <code>curl</code>,
+      and any other tool work unmodified, with no configuration or wrappers needed inside the environment.
+      Branches run with full internet, proxy-only egress, or completely airgapped.
+    </p>
+    <p>
+      The proxy also caches container image layers and build artifacts on the host &mdash;
+      the same dependency is never downloaded twice.
+    </p>
+  </section>
+
+  <section class="feature">
+    <h2>Instant branching</h2>
+    <p>
+      Like <code>git branch</code>, each clone is a copy-on-write snapshot that shares storage
+      with its parent. Build a template once with your preferred tools and repos, then spin up
+      complete, disposable environments in seconds &mdash; each with its own filesystem,
+      networking, and process tree.
+    </p>
+    <pre><code>tpl-java  (stopped template, ~2GB)
+  &#9500;&#9472;&#9472; fix-nasty-bug    (running, uses ~50MB extra)
+  &#9500;&#9472;&#9472; review-pr-423    (running, uses ~30MB extra)
+  &#9492;&#9472;&#9472; experiment       (stopped, uses ~10MB extra)</code></pre>
+  </section>
+
+  <section class="feature">
+    <h2>Built for developer workflows</h2>
+    <p>
+      Templates are YAML: packages, tools, repos. Branch and it's all there.
+      Git remotes are managed automatically &mdash;
+      <code>git fetch fix-auth</code> from your host pulls commits straight out of the container.
+      JetBrains Gateway, shell completions, and Claude Code skills plug in via the same tool system.
+    </p>
+    <pre><code># Inside the container, you make some commits...
+# Back on the host:
+git fetch fix-auth
+git cherry-pick fix-auth/main</code></pre>
+  </section>
+
+  <section class="screenshot">
+    <img src="screenshot.png" alt="incus-spawn interactive TUI showing templates and instances">
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <ul class="footer-links">
+    <li><a href="docs.html">Docs</a></li>
+    <li><a href="https://github.com/Sanne/incus-spawn">GitHub</a></li>
+    <li><a href="https://github.com/Sanne/incus-spawn/issues">Issues</a></li>
+  </ul>
+  <p>Built on <a href="https://linuxcontainers.org/incus/">Incus</a>, <a href="https://quarkus.io/">Quarkus</a>, <a href="https://tamboui.dev/">Tamboui</a>, and <a href="https://www.graalvm.org/">GraalVM</a></p>
+</footer>
+
+<script>
+document.querySelectorAll('.tab-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+</script>
+
+</body>
+</html>

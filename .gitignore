@@ -55,3 +55,6 @@ appliance/kernel/vmlinuz
 
 # Benchmark artifacts
 bench/results/
+
+# Site build output
+_site/

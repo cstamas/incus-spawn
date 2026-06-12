@@ -1,0 +1,437 @@
+:root {
+  --bg: #fafaf9;
+  --bg-alt: #f5f5f4;
+  --fg: #1c1917;
+  --fg-muted: #57534e;
+  --accent: #475569;
+  --accent-hover: #334155;
+  --border: #d6d3d1;
+  --code-bg: #e7e5e4;
+  --code-fg: #1c1917;
+  --pre-bg: #292524;
+  --pre-fg: #d6d3d1;
+  --hero-bg: #292524;
+  --hero-fg: #fafaf9;
+  --hero-muted: #a8a29e;
+  --section-gap: 5rem;
+  --max-width: 860px;
+}
+
+
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--fg);
+  background: var(--bg);
+  line-height: 1.7;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+
+/* --- Navigation --- */
+
+.site-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.site-nav .logo {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--fg);
+  text-decoration: none;
+  font-family: "SF Mono", "Fira Code", "Fira Mono", Menlo, Consolas, monospace;
+}
+
+.site-nav .nav-links {
+  display: flex;
+  gap: 1.5rem;
+  list-style: none;
+}
+
+.site-nav .nav-links a {
+  color: var(--fg-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.site-nav .nav-links a:hover {
+  color: var(--fg);
+  text-decoration: none;
+}
+
+/* --- Hero --- */
+
+.hero {
+  background: var(--hero-bg);
+  color: var(--hero-fg);
+  padding: 3rem 1.5rem 3rem;
+  text-align: center;
+}
+
+.hero h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  max-width: 780px;
+  margin: 0 auto 1rem;
+  letter-spacing: -0.02em;
+}
+
+.hero .subtitle {
+  font-size: 1.1rem;
+  color: var(--hero-muted);
+  max-width: 640px;
+  margin: 0 auto 2rem;
+  line-height: 1.6;
+}
+
+.hero .install-tabs {
+  max-width: 520px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.hero .tab-buttons {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #334155;
+}
+
+.hero .tab-btn {
+  background: none;
+  border: none;
+  color: var(--hero-muted);
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.hero .tab-btn.active {
+  color: var(--hero-fg);
+  border-bottom-color: var(--accent);
+}
+
+.hero .tab-panel {
+  display: none;
+  background: var(--pre-bg);
+  border-radius: 0 0 8px 8px;
+  padding: 1rem 1.25rem;
+  font-family: "SF Mono", "Fira Code", "Fira Mono", Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+  color: var(--pre-fg);
+  overflow-x: auto;
+}
+
+.hero .tab-panel.active {
+  display: block;
+}
+
+.hero .tab-panel code {
+  color: inherit;
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+.hero .cta-links {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.hero .cta-links a {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.hero .cta-links a.primary {
+  background: var(--accent);
+  color: #fff;
+  padding: 0.6rem 1.4rem;
+  border-radius: 6px;
+  text-decoration: none;
+}
+
+.hero .cta-links a.primary:hover {
+  background: var(--accent-hover);
+}
+
+.hero .cta-links a.secondary {
+  color: var(--hero-muted);
+  padding: 0.6rem 0;
+}
+
+.hero .cta-links a.secondary:hover {
+  color: var(--hero-fg);
+}
+
+/* --- Feature sections --- */
+
+.features {
+  padding: var(--section-gap) 1.5rem;
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+.feature {
+  margin-bottom: var(--section-gap);
+}
+
+.feature:last-child {
+  margin-bottom: 0;
+}
+
+.feature h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.feature p {
+  color: var(--fg-muted);
+  margin-bottom: 1rem;
+}
+
+.feature strong {
+  color: var(--fg);
+}
+
+.feature pre {
+  background: var(--pre-bg);
+  color: var(--pre-fg);
+  padding: 1.25rem 1.5rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  font-family: "SF Mono", "Fira Code", "Fira Mono", Menlo, Consolas, monospace;
+  margin: 1rem 0;
+}
+
+.feature code {
+  font-family: "SF Mono", "Fira Code", "Fira Mono", Menlo, Consolas, monospace;
+  background: var(--code-bg);
+  color: var(--code-fg);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.875em;
+}
+
+.feature pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* --- Screenshot --- */
+
+.screenshot {
+  padding: 3rem 1.5rem;
+  text-align: center;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.screenshot img {
+  max-width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.screenshot .placeholder {
+  background: var(--bg-alt);
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 4rem 2rem;
+  color: var(--fg-muted);
+  font-size: 0.9rem;
+}
+
+/* --- Footer --- */
+
+.site-footer {
+  border-top: 1px solid var(--border);
+  padding: 2rem 1.5rem;
+  text-align: center;
+  color: var(--fg-muted);
+  font-size: 0.85rem;
+}
+
+.site-footer a {
+  color: var(--fg-muted);
+}
+
+.site-footer a:hover {
+  color: var(--fg);
+}
+
+.site-footer .footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 0.75rem;
+  list-style: none;
+}
+
+/* --- Docs page --- */
+
+.docs-content {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 3rem 1.5rem 5rem;
+}
+
+.docs-content h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.02em;
+}
+
+.docs-content h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 3rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.docs-content h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.docs-content h4 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.docs-content p {
+  margin-bottom: 1rem;
+}
+
+.docs-content ul, .docs-content ol {
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+
+.docs-content li {
+  margin-bottom: 0.35rem;
+}
+
+.docs-content pre {
+  background: var(--pre-bg);
+  color: var(--pre-fg);
+  padding: 1.25rem 1.5rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  font-family: "SF Mono", "Fira Code", "Fira Mono", Menlo, Consolas, monospace;
+  margin-bottom: 1rem;
+}
+
+.docs-content code {
+  font-family: "SF Mono", "Fira Code", "Fira Mono", Menlo, Consolas, monospace;
+  background: var(--code-bg);
+  color: var(--code-fg);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.875em;
+}
+
+.docs-content pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+}
+
+.docs-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.docs-content th, .docs-content td {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+}
+
+.docs-content th {
+  background: var(--bg-alt);
+  font-weight: 600;
+}
+
+.docs-content blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 1rem;
+  color: var(--fg-muted);
+  margin-bottom: 1rem;
+}
+
+/* --- Responsive --- */
+
+@media (max-width: 640px) {
+  .hero h1 {
+    font-size: 1.75rem;
+  }
+
+  .hero .subtitle {
+    font-size: 1rem;
+  }
+
+  .hero .install-tabs {
+    max-width: 100%;
+  }
+
+  .feature h2 {
+    font-size: 1.25rem;
+  }
+
+  :root {
+    --section-gap: 3rem;
+  }
+}
