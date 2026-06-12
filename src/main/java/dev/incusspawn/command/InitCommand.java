@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 @CommandDefinition(
         name = "init",
@@ -33,6 +34,83 @@ import java.util.concurrent.TimeUnit;
 public class InitCommand extends BaseCommand {
 
     private IncusClient incus;
+
+    private static final String CYAN = "\u001B[36m";
+    private static final String BOLD = "\u001B[1m";
+    private static final String DIM = "\u001B[2m";
+    private static final String GREEN_BOLD = "\u001B[1;32m";
+    private static final String RESET = "\u001B[0m";
+    private static final int BOX_WIDTH = 62;
+    private static final Pattern ANSI_PATTERN = Pattern.compile("\u001B\\[[0-9;]*m");
+    private static final String BORDER_H = "─".repeat(BOX_WIDTH);
+    private static final String TOP_BORDER = CYAN + "╭" + BORDER_H + "╮" + RESET;
+    private static final String BOT_BORDER = CYAN + "╰" + BORDER_H + "╯" + RESET;
+
+    private static final String[] DNS_HINT = {
+            "Configures the Incus bridge network so that containers",
+            "resolve intercepted domains (GitHub, Anthropic, etc.) to",
+            "the proxy gateway. This lets the MITM proxy transparently",
+            "inject credentials into HTTPS requests without containers",
+            "needing any special network configuration."
+    };
+
+    private int totalSteps;
+    private int currentStep;
+
+    private static String pad(String s, int width) {
+        int vlen = ANSI_PATTERN.matcher(s).replaceAll("").length();
+        if (vlen >= width) return s;
+        return s + " ".repeat(width - vlen);
+    }
+
+    private static String boxLine(String content) {
+        return CYAN + "│" + RESET + pad(content, BOX_WIDTH) + CYAN + "│" + RESET;
+    }
+
+    private static void printBanner(String title, String subtitle, String info) {
+        System.out.println();
+        System.out.println(TOP_BORDER);
+        System.out.println(boxLine(""));
+        System.out.println(boxLine("   " + BOLD + title + RESET));
+        System.out.println(boxLine("   " + subtitle));
+        System.out.println(boxLine(""));
+        System.out.println(boxLine("   " + DIM + info + RESET));
+        System.out.println(boxLine(""));
+        System.out.println(BOT_BORDER);
+        System.out.println();
+    }
+
+    private void startStep(String title, String... hintLines) {
+        currentStep++;
+        String left = "  " + currentStep + "  " + title;
+        String right = "[" + currentStep + "/" + totalSteps + "]  ";
+        int gap = BOX_WIDTH - left.length() - right.length();
+
+        System.out.println();
+        System.out.println(TOP_BORDER);
+        System.out.println(CYAN + "│" + RESET + BOLD + left + RESET
+                + " ".repeat(Math.max(1, gap)) + DIM + right + RESET + CYAN + "│" + RESET);
+        System.out.println(BOT_BORDER);
+
+        if (hintLines.length > 0) {
+            for (var line : hintLines) {
+                System.out.println(CYAN + "  ┃ " + RESET + DIM + line + RESET);
+            }
+            System.out.println();
+        }
+    }
+
+    private static void printCompletionBox(String... lines) {
+        System.out.println();
+        System.out.println(TOP_BORDER);
+        System.out.println(boxLine(""));
+        for (var line : lines) {
+            System.out.println(boxLine(line));
+        }
+        System.out.println(boxLine(""));
+        System.out.println(BOT_BORDER);
+        System.out.println();
+    }
 
     /**
      * Check if init has been run. If not, print a warning and auto-launch init.
@@ -116,7 +194,20 @@ public class InitCommand extends BaseCommand {
         if (!requireLinux()) {
             return CommandResult.valueOf(1);
         }
-        System.out.println("=== incus-spawn init ===\n");
+        totalSteps = 12;
+        currentStep = 0;
+        printBanner("incus-spawn — First-Time Setup",
+                "Configuring your isolated development environment",
+                totalSteps + " steps · ~3 minutes · some steps require sudo");
+
+        System.out.println();
+        System.out.println("  Several steps need " + BOLD + "sudo" + RESET + " to install packages, configure");
+        System.out.println("  the firewall, and set up user namespace mappings.");
+        System.out.println();
+        if (runHost("sudo", "-v") != 0) {
+            System.err.println("  sudo authentication failed. Please ensure you have sudo access and try again.");
+            return CommandResult.valueOf(1);
+        }
 
         installDependencies();
         checkIncusInstalled();
@@ -133,26 +224,42 @@ public class InitCommand extends BaseCommand {
 
         installGitRemoteShim();
 
+        startStep("DNS Configuration", DNS_HINT);
         MitmProxy.configureBridgeDns(incus);
 
+        startStep("Proxy Service",
+                "The MITM proxy intercepts HTTPS traffic from containers",
+                "and injects real credentials (API keys, tokens) so that",
+                "containers only ever hold placeholder values. Installing",
+                "it as a systemd service means it starts automatically on",
+                "boot — otherwise you'll need to run 'isx proxy start'",
+                "before launching containers.");
         boolean proxyServiceInstalled = offerProxyService();
 
-        System.out.println("\n=== Init complete! ===");
-        System.out.println("Next steps:");
-        System.out.println("  1. Build a template:      isx build tpl-java");
-        if (proxyServiceInstalled) {
-            System.out.println("  2. Proxy is running as a service (systemctl --user status incus-spawn-proxy)");
-        } else {
-            System.out.println("  2. Start the auth proxy:  isx proxy start");
-        }
-        System.out.println("  3. Launch the TUI:        isx");
+        var proxyStep = proxyServiceInstalled
+                ? "   2. Proxy is running as a systemd service"
+                : "   2. Start the auth proxy:  isx proxy start";
+        printCompletionBox(
+                "   " + GREEN_BOLD + "✓" + RESET + BOLD + " Setup complete!" + RESET,
+                "",
+                "   " + BOLD + "Next steps:" + RESET,
+                "   1. Build a template:      isx build tpl-java",
+                proxyStep,
+                "   3. Launch the TUI:        isx");
         return CommandResult.SUCCESS;
     }
 
     private CommandResult doMacOsInit() throws Exception {
-        System.out.println("=== incus-spawn init (macOS) ===\n");
+        totalSteps = 8;
+        currentStep = 0;
+        printBanner("incus-spawn — First-Time Setup (macOS)",
+                "Configuring your isolated development environment",
+                totalSteps + " steps · ~2 minutes");
 
-        System.out.println("[1/8] Generating MITM CA certificate...");
+        startStep("MITM CA Certificate",
+                "Generates a custom Certificate Authority for the MITM",
+                "proxy. Containers trust this CA so the proxy can intercept",
+                "HTTPS and inject credentials transparently.");
         var gatewayIp = MitmProxy.resolveGatewayIp(incus);
         var config = SpawnConfig.load();
         config.setIncusBridgeGateway(gatewayIp);
@@ -172,18 +279,29 @@ public class InitCommand extends BaseCommand {
 
         installGitRemoteShim();
 
+        startStep("DNS Configuration", DNS_HINT);
         var spawnConfig = SpawnConfig.load();
         if (!spawnConfig.getClaude().getApiKey().isBlank() || spawnConfig.getClaude().isUseVertex()
                 || !spawnConfig.getGithub().getToken().isBlank()) {
             MitmProxy.configureBridgeDns(incus);
+        } else {
+            System.out.println("  Skipped — no API keys configured yet.");
         }
 
+        startStep("macOS Services",
+                "Installs the Incus VM and MITM proxy as macOS launch",
+                "agents so they start automatically on login and survive",
+                "reboots. Without this you'll need to manually run",
+                "'isx vm start' and 'isx proxy start' before launching",
+                "containers.");
         offerMacOsServices();
 
-        System.out.println("\n=== Init complete! ===");
-        System.out.println("Next steps:");
-        System.out.println("  1. Build a template:  isx build tpl-java");
-        System.out.println("  2. Launch the TUI:    isx");
+        printCompletionBox(
+                "   " + GREEN_BOLD + "✓" + RESET + BOLD + " Setup complete!" + RESET,
+                "",
+                "   " + BOLD + "Next steps:" + RESET,
+                "   1. Build a template:  isx build tpl-java",
+                "   2. Launch the TUI:    isx");
         return CommandResult.SUCCESS;
     }
 
@@ -240,7 +358,11 @@ public class InitCommand extends BaseCommand {
     }
 
     private void checkIncusInstalled() {
-        System.out.println("[1/10] Checking Incus installation...");
+        startStep("Incus Installation",
+                "Incus provides full Linux system containers — lightweight",
+                "VMs with near-native performance. This step installs the",
+                "Incus package, enables its systemd service, and adds your",
+                "user to the incus-admin group for unprivileged access.");
         var result = runHost("which", "incus");
         if (result != 0) {
             var installCmd = detectInstallCommand();
@@ -320,7 +442,11 @@ public class InitCommand extends BaseCommand {
     }
 
     private void configureFirewall() {
-        System.out.println("[4/10] Configuring firewall for Incus bridge...");
+        startStep("Firewall Configuration",
+                "Configures firewalld so containers can reach the internet",
+                "and resolve DNS. Adds the Incus bridge to the trusted zone,",
+                "enables NAT masquerading, and sets up FORWARD rules for",
+                "Docker coexistence.");
 
         // Check if firewalld is available
         var fwCheck = runHost("which", "firewall-cmd");
@@ -407,7 +533,11 @@ public class InitCommand extends BaseCommand {
     }
 
     private void configureMitmProxy() {
-        System.out.println("[5/10] Configuring MITM authentication proxy...");
+        startStep("MITM Authentication Proxy",
+                "The MITM proxy intercepts HTTPS from containers and injects",
+                "your real API credentials, so containers never hold sensitive",
+                "tokens directly. This step sets up iptables port redirection",
+                "and generates a custom CA certificate trusted by containers.");
 
         // Add iptables PREROUTING redirect: traffic arriving on incusbr0 destined
         // for the gateway IP on port 443 is redirected to the proxy's listen port.
@@ -447,7 +577,11 @@ public class InitCommand extends BaseCommand {
     }
 
     private void setupSshKeyPair() {
-        System.out.println("[6/10] Configuring SSH key pair...");
+        startStep("SSH Key Pair",
+                "Generates a dedicated SSH key pair used only by isx",
+                "to connect to containers. This is separate from your personal",
+                "SSH keys and won't interfere with them. Your ~/.ssh/config is",
+                "updated automatically.");
         try {
             if (SshKeyManager.exists()) {
                 System.out.println("  SSH key pair already exists.");
@@ -468,7 +602,11 @@ public class InitCommand extends BaseCommand {
     }
 
     private void configureSubuidSubgid() {
-        System.out.println("[2/10] Configuring subuid/subgid mappings...");
+        startStep("User Namespace Mappings",
+                "Containers use Linux user namespaces to isolate processes.",
+                "This configures /etc/subuid and /etc/subgid so the",
+                "container's root user maps to an unprivileged UID range",
+                "on the host, preventing privilege escalation.");
         boolean changed = false;
         try {
             var subuid = java.nio.file.Files.readString(java.nio.file.Path.of("/etc/subuid"));
@@ -491,7 +629,11 @@ public class InitCommand extends BaseCommand {
     }
 
     private void initializeIncus() {
-        System.out.println("[3/10] Initializing Incus (storage pool, network bridge)...");
+        startStep("Storage & Network",
+                "Initializes the Incus daemon with a network bridge and",
+                "storage pool. If no copy-on-write (btrfs) pool exists,",
+                "one is created — enabling instant, space-efficient clones",
+                "when you branch containers.");
 
         // Check if we can talk to the Incus daemon
         var connectivity = incus.checkConnectivity();
@@ -603,7 +745,12 @@ public class InitCommand extends BaseCommand {
     }
 
     private void setupClaudeAuth() {
-        System.out.println("[7/10] Configuring Claude Code authentication...");
+        startStep("Claude Code Authentication",
+                "Configures how containers authenticate with the Claude API.",
+                "You can use a direct Anthropic API key or Google Cloud",
+                "Vertex AI. The credential stays on your host and is injected",
+                "at runtime via the MITM proxy — containers never see the",
+                "real key.");
         var config = SpawnConfig.load();
         var console = System.console();
         if (console == null) {
@@ -847,7 +994,15 @@ public class InitCommand extends BaseCommand {
     }
 
     private void setupGitHubAuth() {
-        System.out.println("[8/10] Configuring GitHub authentication...");
+        startStep("GitHub Authentication",
+                "Sets up a GitHub PAT so containers can open PRs, push",
+                "code, and manage issues on your behalf. For best security,",
+                "create a dedicated bot account (e.g. yourname-ai-bot) with",
+                "collaborator access, or use a fine-grained PAT scoped to",
+                "specific repos and permissions. For example, grant Contents,",
+                "Issues, and Pull requests (read/write) — avoid admin, org,",
+                "and delete permissions unless needed.",
+                "Create one at: https://github.com/settings/personal-access-tokens");
         var config = SpawnConfig.load();
         var console = System.console();
         if (console == null) {
@@ -855,25 +1010,6 @@ public class InitCommand extends BaseCommand {
             return;
         }
 
-        System.out.println("  Agents running inside containers will interact with GitHub on your behalf.");
-        System.out.println("  For best security, we recommend using a separate GitHub identity:");
-        System.out.println();
-        System.out.println("  Option A (recommended): Create a dedicated GitHub account for your agent");
-        System.out.println("    - Sign up at https://github.com/signup (e.g. 'yourname-bot' or 'yourorg-agent')");
-        System.out.println("    - Grant it collaborator access only to the repos it needs");
-        System.out.println("    - Then create a PAT at https://github.com/settings/tokens?type=beta");
-        System.out.println("    - PRs and issues will be clearly attributed to the agent, not you");
-        System.out.println("    - Easy to revoke access without affecting your personal account");
-        System.out.println();
-        System.out.println("  Option B: Use a fine-grained PAT from your existing account");
-        System.out.println("    - Go to https://github.com/settings/tokens?type=beta");
-        System.out.println("    - Create a token named 'incus-spawn-agent'");
-        System.out.println("    - Scope it to only the repositories you need");
-        System.out.println("    - Grant: Contents (read/write), Issues (read/write), Pull requests (read/write)");
-        System.out.println("    - Do NOT grant admin, org, or delete permissions");
-        System.out.println();
-        System.out.println("  In either case, use a dedicated token -- not your personal one.");
-        System.out.println();
         while (true) {
             System.out.print("  GitHub PAT (or press Enter to skip): ");
             var token = new String(console.readPassword());
@@ -926,12 +1062,9 @@ public class InitCommand extends BaseCommand {
     }
 
     private void setupPathList(
-            String stepLabel,
             java.util.function.Function<SpawnConfig, java.util.List<String>> getter,
             java.util.function.BiConsumer<SpawnConfig, java.util.List<String>> setter,
-            String description,
             String skipMessage) {
-        System.out.println(stepLabel);
         var config = SpawnConfig.load();
         var existing = getter.apply(config);
 
@@ -947,8 +1080,6 @@ public class InitCommand extends BaseCommand {
             System.err.println("  Error: no console available for interactive setup.");
             return;
         }
-
-        System.out.println(description);
 
         var paths = new java.util.ArrayList<>(existing);
         while (true) {
@@ -982,23 +1113,31 @@ public class InitCommand extends BaseCommand {
     }
 
     private void setupSearchPaths() {
+        startStep("Template Search Paths",
+                "Optional directories where isx looks for custom image and",
+                "tool definitions. Definitions found here can extend or",
+                "override the built-in templates. Each directory should",
+                "contain images/ and/or tools/ subdirectories with YAML",
+                "files. For examples see (experimental, opinionated):",
+                "https://github.com/Sanne/incus-spawn-templates");
         setupPathList(
-                "[9/10] Configuring template search paths...",
                 SpawnConfig::getSearchPaths,
                 SpawnConfig::setSearchPaths,
-                "  You can add directories containing custom image and tool definitions.\n" +
-                "  Each directory should have images/ and/or tools/ subdirectories with YAML files.\n",
                 "  No search paths configured. You can add them later in ~/.config/incus-spawn/config.yaml");
     }
 
     private void setupHostPaths() {
+        startStep("Code Directories",
+                "Directories on your host containing git repositories (e.g.",
+                "~/code). Enables fast reference clones inside containers",
+                "and automatic git remote management — repos cloned from",
+                "these paths get an 'isx' remote, letting you push and pull",
+                "directly between container and host without round-tripping",
+                "through GitHub. Your host files are never directly exposed",
+                "to containers.");
         setupPathList(
-                "[10/10] Configuring host resource paths...",
                 SpawnConfig::getHostPaths,
                 SpawnConfig::setHostPaths,
-                "\n  Host paths are base directories where your git repositories live.\n" +
-                "  This enables faster git clones (reference clones) and auto-remote management.\n" +
-                "  Example: ~/code\n",
                 "  No host paths configured. Add them later by re-running 'isx init'\n" +
                 "  or editing ~/.config/incus-spawn/config.yaml");
     }
